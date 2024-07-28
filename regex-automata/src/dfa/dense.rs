@@ -1391,7 +1391,7 @@ pub struct DFA<T> {
     /// The transition table for this DFA. This includes the transitions
     /// themselves, along with the stride, number of states and the equivalence
     /// class mapping.
-    tt: TransitionTable<T>,
+    pub tt: TransitionTable<T>,
     /// The set of starting state identifiers for this DFA. The starting state
     /// IDs act as pointers into the transition table. The specific starting
     /// state chosen for each search is dependent on the context at which the
@@ -3281,8 +3281,10 @@ unsafe impl<T: AsRef<[u32]>> Automaton for DFA<T> {
 ///
 /// The transition table is the core part of the DFA in that it describes how
 /// to move from one state to another based on the input sequence observed.
+
 #[derive(Clone)]
-pub(crate) struct TransitionTable<T> {
+#[allow(missing_debug_implementations)]
+pub struct TransitionTable<T> {
     /// A contiguous region of memory representing the transition table in
     /// row-major order. The representation is dense. That is, every state
     /// has precisely the same number of transitions. The maximum number of
@@ -3652,7 +3654,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
 
     /// Return the state for the given ID. If the given ID is not valid, then
     /// this panics.
-    fn state(&self, id: StateID) -> State<'_> {
+    pub fn state(&self, id: StateID) -> State<'_> {
         assert!(self.is_valid(id));
 
         let i = id.as_usize();
@@ -3668,7 +3670,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     /// This iterator yields a tuple for each state. The first element of the
     /// tuple corresponds to a state's identifier, and the second element
     /// corresponds to the state itself (comprised of its transitions).
-    fn states(&self) -> StateIter<'_, T> {
+    pub fn states(&self) -> StateIter<'_, T> {
         StateIter {
             tt: self,
             it: self.table().chunks(self.stride()).enumerate(),
@@ -3695,7 +3697,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     ///
     /// If the given index is not in the specified range, then this may panic
     /// or produce an incorrect state ID.
-    fn to_state_id(&self, index: usize) -> StateID {
+    pub fn to_state_id(&self, index: usize) -> StateID {
         // CORRECTNESS: If the given index is not valid, then it is not
         // required for this to panic or return a valid state ID.
         StateID::new_unchecked(index << self.stride2)
@@ -3707,7 +3709,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     /// if the state ID given is the last state in this DFA, then the state ID
     /// returned is guaranteed to be invalid.
     #[cfg(feature = "dfa-build")]
-    fn next_state_id(&self, id: StateID) -> StateID {
+    pub fn next_state_id(&self, id: StateID) -> StateID {
         self.to_state_id(self.to_index(id).checked_add(1).unwrap())
     }
 
@@ -3715,7 +3717,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     ///
     /// If the dead ID given (which is zero), then this panics.
     #[cfg(feature = "dfa-build")]
-    fn prev_state_id(&self, id: StateID) -> StateID {
+    pub fn prev_state_id(&self, id: StateID) -> StateID {
         self.to_state_id(self.to_index(id).checked_sub(1).unwrap())
     }
 
@@ -3730,7 +3732,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     /// states. In particular, the dead state always has ID 0 and is
     /// correspondingly always the first state. The dead state is never a match
     /// state.
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.table().len() >> self.stride2
     }
 
@@ -4755,7 +4757,8 @@ impl Flags {
 ///
 /// `'a` corresponding to the lifetime of original DFA, `T` corresponds to
 /// the type of the transition table itself.
-pub(crate) struct StateIter<'a, T> {
+#[allow(missing_debug_implementations)]
+pub struct StateIter<'a, T> {
     tt: &'a TransitionTable<T>,
     it: iter::Enumerate<slice::Chunks<'a, StateID>>,
 }
@@ -4774,7 +4777,7 @@ impl<'a, T: AsRef<[u32]>> Iterator for StateIter<'a, T> {
 /// An immutable representation of a single DFA state.
 ///
 /// `'a` correspondings to the lifetime of a DFA's transition table.
-pub(crate) struct State<'a> {
+pub struct State<'a> {
     id: StateID,
     stride2: usize,
     transitions: &'a [StateID],
@@ -4788,7 +4791,7 @@ impl<'a> State<'a> {
     /// Each transition is represented by a tuple. The first element is
     /// the input byte for that transition and the second element is the
     /// transitions itself.
-    pub(crate) fn transitions(&self) -> StateTransitionIter<'_> {
+    pub fn transitions(&self) -> StateTransitionIter<'_> {
         StateTransitionIter {
             len: self.transitions.len(),
             it: self.transitions.iter().enumerate(),
@@ -4807,7 +4810,7 @@ impl<'a> State<'a> {
     /// representation (where you have an element for every non-dead
     /// transition), but in practice, checking if a byte is in a range is very
     /// cheap and using ranges tends to conserve quite a bit more space.
-    pub(crate) fn sparse_transitions(&self) -> StateSparseTransitionIter<'_> {
+    pub fn sparse_transitions(&self) -> StateSparseTransitionIter<'_> {
         StateSparseTransitionIter { dense: self.transitions(), cur: None }
     }
 
@@ -4871,7 +4874,7 @@ impl<'a> fmt::Debug for State<'a> {
 /// Each transition is represented by a tuple. The first element is the input
 /// byte for that transition and the second element is the transition itself.
 #[derive(Debug)]
-pub(crate) struct StateTransitionIter<'a> {
+pub struct StateTransitionIter<'a> {
     len: usize,
     it: iter::Enumerate<slice::Iter<'a, StateID>>,
 }
@@ -4904,7 +4907,7 @@ impl<'a> Iterator for StateTransitionIter<'a> {
 /// type. That is, you'll never get a (byte, EOI) or a (EOI, byte). Only (byte,
 /// byte) and (EOI, EOI) values are yielded.
 #[derive(Debug)]
-pub(crate) struct StateSparseTransitionIter<'a> {
+pub struct StateSparseTransitionIter<'a> {
     dense: StateTransitionIter<'a>,
     cur: Option<(alphabet::Unit, alphabet::Unit, StateID)>,
 }
