@@ -4815,7 +4815,7 @@ impl<'a> State<'a> {
     }
 
     /// Returns the identifier for this state.
-    pub(crate) fn id(&self) -> StateID {
+    pub fn id(&self) -> StateID {
         self.id
     }
 
